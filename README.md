@@ -10,6 +10,12 @@ Git mirror of the Redmine Custom Workflows plugin, as I couldn't find one.
 Changelog
 ---------
 
+### 0.0.3 (2012-09-10)
+
+_Compatible with Redmine 2.1.x, 2.0.x, 1.4.x, 1.3.x, 1.2.x._
+
+* Added compatibility with 1.2.x, 1.3.x
+
 ### 0.0.2 (2012-09-08)
 
 _Compatible with Redmine 2.1.x, 2.0.x, 1.4.x._
