@@ -10,6 +10,15 @@ Git mirror of the Redmine Custom Workflows plugin, as I couldn't find one.
 Changelog
 ---------
 
+### 0.0.4 (2012-10-08)
+
+_Compatible with Redmine 2.1.x, 2.0.x, 1.4.x, 1.3.x, 1.2.x._
+
+* Added ability to enable workflows globally for all projects. No need to enable 'Custom workflows' project module anymore. Just go to the 'Administration' -> 'Custom workflows' section and enable or disable your workflows in one place.
+* Fixed bug with 'Status transition prohibited' when updating the issue status by the repository commit
+
+Don't forget to migrate plugins after installing the new version.
+
 ### 0.0.3 (2012-09-10)
 
 _Compatible with Redmine 2.1.x, 2.0.x, 1.4.x, 1.3.x, 1.2.x._

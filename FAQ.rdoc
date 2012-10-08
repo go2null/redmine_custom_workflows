@@ -1,0 +1,147 @@
+= Custom Workflows FAQ
+
+I receive many questions about how to access and manipulate the issue data, so I created standalone page, when I will answer to these questions.
+
+== How I can access and manipulate issue properties?
+
+You can directly access next issue properties:
+
+* [RW] tracker_id
+* [RW] tracker -- Tracker object
+* [RW] project_id
+* [RW] project -- Project object
+* [RW] assigned_to_id
+* [RW] assigned_to -- Principal object
+* [RW] subject
+* [RW] description
+* [RW] due_date
+* [RW] category_id
+* [RW] category -- IssueCategory object
+* [RW] status_id
+* [RW] status -- IssueStatus object
+* [RW] priority_id
+* [RW] priority -- IssuePriority object
+* [RW] fixed_version_id
+* [RW] fixed_version -- Version object
+* [RW] author_id
+* [RW] author -- User object
+* [RW] created_on
+* [R ] updated_on
+* [RW] start_date
+* [RW] done_ratio
+* [RW] estimated_hours
+* [R ] parent -- Issue object
+* [RW] parent_issue_id
+* [RW] is_private
+
+To access the property, use its name. To manipulate the property, use its name preceded by "self." and followed by "=". For example:
+
+  self.due_date = start_date.present? ? start_date+1.month : nil
+
+Note that direct attributes assigning may cause security problems, if your script changes properties that should not be changed by the current user.
+For mass-assign issue attributes with security check, you can use safe_attributes=(attrs) method:
+
+  self.safe_attributes = {:status_id => 3, :subject => "..."}
+
+h2. How to know whether the issue property has been changed and what was its old value?
+
+Tip: You can do this only in the before_save script, because after the issue was saved, it does not contain any changed properties anymore.
+
+Most of the properties listed above (except object properties) has following forms:
+
+* tracker_id_changed? -- Returns true if tracker is changed
+* tracker_id_was -- Returns the old value of tracker_id
+
+Also you can use:
+
+* changed? -- To know whether the issue has been changed
+* changes -- Returns array of all properties has been changed (containing the old and the new value)
+
+  >> i = Issue.new
+  >> i.changed?
+  => true
+  >> i.changes
+  => {"priority_id"=>[0, 4], "status_id"=>[0, 1]}
+
+(new issue is changed because Redmine initializes a priority and a status with default values)
+
+== How can I access and manipulate custom fields?
+
+Here are some methods you can use for accessing and manipulating custom fields:
+* custom_field_value(custom_field_id) -- Returns a single custom value
+* custom_field_values -- Returns an array of CustomFieldValue objects. CustomFieldValue is a simple object that stores *custom_field* property and plain *value* property.
+* custom_field_values=(values) -- Sets the values of the object's custom fields, values is a hash like {'1' => 'foo', '2' => 'bar', custom_field_id => value}
+* custom_field_values_changed? -- Returns true if any of the custom values has been changed
+* custom_value_for(custom_field_id) -- Returns a CustomValue object for the specified custom field
+
+== How to know whether the issue custom field has been changed and what was its old value?
+
+Tip: You can do this only in the before_save script.
+
+You can call custom_field_value(custom_field_id) method to get a value that has not been yet saved. Against you can call custom_value_for(custom_field_id).try(&:value) to get an old custom field value. So compare both values to know whether custom field has been changed.
+
+  if custom_field_value(23) != custom_value_for(23).try(&:value)
+    ...
+  end
+
+== What else methods of the Issue object I can use?
+
+Here are some methods you can use:
+* visible?(usr=nil) -- Returns true if usr or current user is allowed to view the issue
+* copy(attributes=nil, copy_options={}) -- Returns an unsaved copy of the issue
+* copy? -- Returns true if the issue is a copy
+* new_record? -- Returns true if the issue is created, but not yet saved (use it only in +before_save+ script, because in +after_save+ it is always true)
+* closed? -- Returns true if the issue is closed, otherwise false
+* reopened? -- Returns true if the issue is being reopened
+* closing? -- Returns true if the issue is being closed
+* overdue? -- Returns true if the issue is overdue
+* behind_schedule? -- Is the amount of work done less than it should for the due date
+* children? -- Does this issue have children?
+* assignable_users -- Returns the list of users the issue can be assigned to
+* assignable_versions -- Versions that the issue can be assigned to
+* blocked? -- Returns true if this issue is blocked by another issue that is still open
+* new_statuses_allowed_to(user=User.current, include_default=false) -- Returns an array of statuses that user is able to apply
+* recipients -- Returns the mail adresses of users that should be notified
+* spent_hours -- Returns the number of hours spent on this issue
+* total_spent_hours -- Returns the total number of hours spent on this issue and its descendants
+* relations -- Returns all related issues
+* children -- Returns all children
+* duplicates -- Returns an array of issues that duplicate this one
+
+== How can I experiment with the issue interactively?
+
+You can use Rails Console. Go to the Redmine directory and run:
+
+  ruby script\rails console production
+
+for Redmine >= 2.0.0, or:
+
+  ruby script\console production
+
+for Redmine < 2.0.0. It's ready to do some Ruby magic:
+
+  Loading production environment (Rails 2.3.14)
+  >> i = Issue.find(1)
+  => #<Issue id: 1, tracker_id: 1, project_id: 1, subject: "test", description: "", due_date: nil, category_id: nil, status_id: 3, assigned_to_id: nil, 
+  priority_id: 4, fixed_version_id: nil, author_id: 2, lock_version: 4, created_on: "2012-08-28 16:10:39", updated_on: "2012-09-08 18:32:56", 
+  start_date: nil, done_ratio: 0, estimated_hours: nil, parent_id: nil, root_id: 1, lft: 1, rgt: 4, is_private: false>
+  
+  >> i = Issue.new
+  => #<Issue id: nil, tracker_id: 0, project_id: 0, subject: "", description: nil, due_date: nil, category_id: nil, status_id: 1, assigned_to_id: nil, 
+  priority_id: 4, fixed_version_id: nil, author_id: 0, lock_version: 0, created_on: nil, updated_on: nil, start_date: nil, 
+  done_ratio: 0, estimated_hours: nil, parent_id: nil, root_id: nil, lft: nil, rgt: nil, is_private: false>
+
+== Why I get error "Workflow script executable after saving the issue contains error: Validation failed" when trying to save the workflow.
+
+The plugin creates a new issue (without parameters) and pass it to both scripts while validating. Thus it can validate a syntax of the code. 
+If your script depends on it, for example, you create a issue based on "self" issue, this issue will be created on the validation and may not be saved due to failing saving some required fields.
+
+Your script should contain some code checking whether it runs in a “validate” mode or it processing “real” issue. In most cases you can check whether issue is the new record (in the before_save script):
+
+  if self.new_record?
+
+But if you need to process real new issues, you should consider using:
+
+  if self.subject.present?
+
+Agreed, this is not obvious and leads to some dirty hacks in the script's code, maybe I will change it somehow in the future.
